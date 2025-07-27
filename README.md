@@ -1,38 +1,92 @@
-WHENEVER YOU MAKE A CHANGE THAT WOULD BASICALLY REQUIRE AN UPDATE TO THE CLAUDE.MD FILE, MAKE SURE YOU ALSO UPDATE THE CLAUDE.MD FILE SO THAT IT STAYS UP-TO-DATE AND IN SYNC WITH THE STATE OF THE CODEBASE.
+# Dobby 🧙‍♂️
 
-# Dobby
+> AI-powered parallel video generation system using browser automation
 
-A TypeScript Express server designed for deployment on Google Cloud Run.
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://cloud.google.com/)
 
-## Features
+Dobby is a high-performance video generation API that leverages browser automation to generate videos through Google's Flow video generation service. It manages multiple authenticated browser contexts to enable parallel video generation, handling up to 10 concurrent requests.
 
-- TypeScript with ES2022 target
-- Express.js framework
-- Configured for Google Cloud Run (port 8080)
-- Hot-reloading development environment
-- Strict TypeScript configuration
+## 🚀 Key Features
 
-## Prerequisites
+- **Parallel Processing**: Handle up to 10 concurrent video generation requests
+- **Persistent Authentication**: Context-based authentication that survives between sessions
+- **AI-Powered Automation**: Uses Stagehand for intelligent browser interaction
+- **Cloud-Native**: Designed for deployment on Google Cloud Run
+- **TypeScript**: Fully typed for enhanced developer experience
+- **Scalable Architecture**: Easily expandable to support more concurrent sessions
 
-- Node.js (v18 or higher recommended)
+## 🏗️ Architecture Overview
+
+Dobby uses a unique architecture that combines:
+
+- **[Browserbase](https://www.browserbase.com/)**: Cloud browser infrastructure for running headless browsers
+- **[Stagehand](https://stagehand.dev/)**: AI-powered browser automation tool
+- **Context Pooling**: Maintains 10 pre-authenticated browser contexts for instant access
+- **On-Demand Sessions**: Creates fresh browser sessions for each request using saved contexts
+
+### How It Works
+
+1. **Client Request**: Send a video generation request with a text prompt
+2. **Context Acquisition**: System assigns an available pre-authenticated context
+3. **Browser Automation**: AI navigates the video generation interface
+4. **Video Generation**: Monitors progress and waits for completion
+5. **Download & Delivery**: Retrieves the generated video and streams it to the client
+6. **Cleanup**: Releases the context for the next request
+
+## 📋 Prerequisites
+
+- Node.js v18 or higher
 - npm or yarn
+- Browserbase API key
+- Google API key (for Gemini 2.5 Pro) or OpenAI API key
+- 10 Google accounts for parallel processing
 
-## Installation
+## 🛠️ Installation
 
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/dobby.git
+cd dobby
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-## Available Scripts
+3. Create a `.env` file:
+```env
+PORT=8080
+BROWSERBASE_API_KEY=your_browserbase_api_key
+GOOGLE_API_KEY=your_google_api_key  # Recommended
+# or
+OPENAI_API_KEY=your_openai_api_key
+```
 
-- `npm run dev` - Start the development server with hot-reloading
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm start` - Run the compiled production server
+## 🚦 Quick Start
 
-## API Endpoints
+### Development Mode
+```bash
+npm run dev
+```
 
-### GET /
-Returns a JSON message showing the service status.
+### Production Build
+```bash
+npm run build
+npm start
+```
+
+## 📡 API Reference
+
+### Health Check
+```http
+GET /
+```
+
+Returns service status and health information.
 
 **Response:**
 ```json
@@ -44,292 +98,137 @@ Returns a JSON message showing the service status.
 }
 ```
 
-### POST /generate-video
-Right now, accepts a JSON body and returns a "Hello World" response.
+### Generate Video
+```http
+POST /generate-video
+```
+
+Generates a video based on the provided text prompt.
 
 **Request Body:**
 ```json
 {
-  "any": "data"
+  "prompt": "A magical castle floating in the clouds"
 }
 ```
 
 **Response:**
-```json
-{
-  "message": "Hello World",
-  "timestamp": "2024-01-25T12:00:00.000Z",
-  "receivedData": { "any": "data" }
-}
-```
+- **Content-Type**: `video/mp4`
+- **Body**: Binary video stream
 
-## Environment Variables
+**Status Codes:**
+- `200`: Video generated successfully
+- `503`: All workers busy
+- `500`: Generation failed
 
-Create a `.env` file in the root directory:
+## 🔧 Configuration
 
-```
-PORT=8080
-```
+### Context Setup (One-Time Process)
 
-## Development
+Before using Dobby, you need to set up 10 authenticated browser contexts:
 
-1. Start the development server:
-   ```bash
-   npm run dev
-   ```
+1. Create 10 Google accounts (dobby.worker0@gmail.com through dobby.worker9@gmail.com)
+2. For each account:
+   - Create a Browserbase session with context ID `dobby.worker{0-9}`
+   - Use Session Live View to manually log into Google
+   - Navigate to https://labs.google/fx/tools/flow
+   - Complete any required authentication
+   - The context will persist the authentication state
 
-2. The server will start on `http://localhost:8080`
+### Environment Variables
 
-## Production Build
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `PORT` | Server port | No | `8080` |
+| `BROWSERBASE_API_KEY` | Browserbase API key | Yes | - |
+| `GOOGLE_API_KEY` | Google API key for Gemini | Recommended | - |
+| `OPENAI_API_KEY` | OpenAI API key (fallback) | No | - |
 
-1. Build the TypeScript code:
-   ```bash
-   npm run build
-   ```
-
-2. Start the production server:
-   ```bash
-   npm start
-   ```
-
-## Deployment to Google Cloud Run
-
-This server is configured to listen on port 8080, which is the default port for Google Cloud Run.
-
-1. Build your container image
-2. Deploy to Cloud Run
-3. The service will automatically use port 8080
-
-## Project Structure
+## 📦 Project Structure
 
 ```
 dobby/
 ├── src/
-│   └── server.ts      # Main server file
-├── dist/              # Compiled JavaScript (generated)
-├── .env               # Environment variables
-├── .gitignore         # Git ignore file
-├── package.json       # Project dependencies and scripts
-├── tsconfig.json      # TypeScript configuration
-└── README.md          # This file
+│   ├── server.ts           # Main Express server
+│   ├── config/             # Configuration files
+│   ├── services/           # Core business logic
+│   │   ├── browserbase.ts  # Browserbase integration
+│   │   ├── stagehand.ts    # Stagehand automation
+│   │   └── context-pool.ts # Context management
+│   └── types/              # TypeScript definitions
+├── docs/                   # API documentation
+│   ├── browserbase/        # Browserbase docs
+│   └── stagehand/          # Stagehand docs
+├── dist/                   # Compiled output
+├── .env                    # Environment variables
+├── package.json            # Dependencies
+├── tsconfig.json           # TypeScript config
+├── CLAUDE.md              # AI assistant instructions
+└── README.md              # This file
 ```
 
-# What we are trying to build
-## Browserbase Video Generation System - Complete Architecture
+## 🚀 Deployment
 
-### System Overview
+### Google Cloud Run
 
-We're building a parallel video generation system that maintains 10 persistent browser sessions, each authenticated with a different Google account. The system accepts requests containing a text prompt and reference image, then generates videos through a web-based video generation service. It can handle up to 10 concurrent video generation requests.
+1. Build the container:
+```bash
+gcloud builds submit --tag gcr.io/YOUR_PROJECT/dobby
+```
 
-### Core Architecture Components
+2. Deploy to Cloud Run:
+```bash
+gcloud run deploy dobby \
+  --image gcr.io/YOUR_PROJECT/dobby \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars BROWSERBASE_API_KEY=xxx,GOOGLE_API_KEY=xxx
+```
 
-#### 1. **Context-Based Authentication Strategy**
-Instead of maintaining long-running browser sessions, we use Browserbase's context feature. A context is like a saved browser profile that preserves:
-- Authentication cookies (Google login state)
-- Local storage data
-- Session tokens
-- Browser cache
+## 🔍 Monitoring & Maintenance
 
-We create 10 contexts (user0-context through user9-context), each logged into the video generation website using a different Google account. These contexts persist indefinitely, meaning we only need to log in once during initial setup.
-
-#### 2. **On-Demand Session Creation**
-When a request arrives, we:
-- Find an available context from our pool
-- Create a new Browserbase session using that context
-- The session starts already logged in (no authentication needed)
-- Generate the video
-- Close the session and release the context
-
-This approach is more reliable than keeping sessions alive because:
-- No 6-hour timeout limitations
-- Clean browser state for each request
-- More resource-efficient (only pay for active generation time)
-- Automatic recovery from crashes
-
-### Request Processing Flow
-
-#### Step 1: Client Request
-A client sends a POST request to `/generate-video` containing:
-- A text prompt (e.g., "bananas in pajamas")
-- A reference image file (e.g., banana.png)
-
-#### Step 2: Context Acquisition
-The server's Context Pool Manager:
-- Tracks which contexts are currently in use
-- Finds an available context (e.g., user0-context)
-- Marks it as occupied
-- If all contexts are busy, the request waits or returns an error
-
-#### Step 3: File Upload to Browserbase
-The reference image must be uploaded to Browserbase's cloud storage:
-- Server reads the client's image file
-- Uses Browserbase Upload API to transfer it to their storage
-- Receives a file identifier for use within the browser session
-
-#### Step 4: Session Creation
-Server creates a new Browserbase session:
-- Specifies the acquired context ID
-- Sets `persist: true` to save any state changes back to the context
-- Receives a session ID and connection details
-
-#### Step 5: Browser Automation with Stagehand
-Stagehand (Browserbase's AI-powered automation tool) handles the interaction:
-- Navigates to the video generation website (already logged in via context)
-- Uses natural language commands like:
-  - "Type 'bananas in pajamas' into the prompt field"
-  - "Upload the image to the file upload area"
-  - "Click the generate video button"
-  - "Wait for video generation to complete"
-  - "Click the download button"
-
-#### Step 6: Video Download Handling
-When the download button is clicked:
-- The video file downloads to Browserbase's cloud storage (not locally)
-- The file receives a timestamp to prevent naming conflicts
-- The download completes in the background
-
-#### Step 7: File Retrieval
-Server retrieves the generated video:
-- Uses Browserbase Downloads API to list files for the session
-- Finds the MP4 file by extension
-- Downloads the file from Browserbase to the server
-
-#### Step 8: Client Response
-Server streams the video back to the client:
-- Sets appropriate headers (Content-Type: video/mp4)
-- Streams the file directly to avoid memory issues
-- Includes metadata like generation time
-
-#### Step 9: Cleanup
-After successful response:
-- Close the Browserbase session
-- Release the context back to the pool
-- Context is immediately available for the next request
-
-### Key Design Decisions
-
-#### Why Multiple Users?
-Browserbase contexts cannot be used concurrently. If we used a single user account, we could only process one video at a time. With 10 different Google accounts and contexts, we achieve true parallel processing.
-
-#### Why Contexts Instead of Persistent Sessions?
-- **Reliability**: No session timeout issues (6-hour maximum)
-- **Cost**: Only pay for actual generation time
-- **Stability**: Fresh browser instance for each request
-- **Maintenance**: Contexts persist authentication indefinitely
-
-#### File Handling Through Browserbase
-All file operations go through Browserbase's APIs:
-- **Uploads**: Client → Your Server → Browserbase Storage → Website
-- **Downloads**: Website → Browserbase Storage → Your Server → Client
-
-This is necessary because Browserbase sessions don't have direct filesystem access.
-
-### Setup Process
-
-#### One-Time Context Creation
-1. Create 10 Google accounts (or use existing ones)
-2. For each account:
-   - Create a Browserbase session with a new context ID
-   - Use Session Live View to manually log in via Google
-   - Complete any two-factor authentication
-   - Navigate to the video generation site
-   - Context automatically saves the authentication state
-
-#### Context Pool Manager
-Maintains a data structure tracking:
-- Context IDs (user0-context through user9-context)
-- Availability status (in-use/available)
-- Last used timestamp (for sync delays)
-- Health status (working/needs-reauth)
-
-### Error Handling and Edge Cases
-
-#### Authentication Expiry
-- Monitor each request for login redirects
-- Mark contexts as unhealthy if authentication fails
-- Alert for manual re-authentication
-- Exclude unhealthy contexts from the pool
-
-#### Request Queueing
-When all contexts are busy:
-- Option 1: Return "service busy" error immediately
-- Option 2: Implement a queue with timeout
-- Option 3: Show estimated wait time
-
-#### Context Synchronization
-After a session uses a context, there's a brief delay before it's ready for reuse. The system adds a 2-second buffer between context uses to ensure proper state synchronization.
-
-### Monitoring and Maintenance
-
-#### Health Checks
-- Periodic validation of context authentication
-- Track success/failure rates per context
+### Health Monitoring
+- Track context availability and health status
+- Monitor authentication expiry
 - Alert on repeated failures
 
-#### Performance Metrics
-- Average video generation time
+### Performance Metrics
+- Average video generation time: ~60-90 seconds
 - Context utilization rates
-- Queue depths and wait times
-- File upload/download speeds
+- Request queue depths
+- Success/failure rates per context
 
-### Scalability Considerations
+## 🎯 Scaling
 
-To scale beyond 10 concurrent videos:
-- Create additional Google accounts and contexts
-- Implement multiple server instances with shared context pool
-- Consider context rotation strategies
-- Monitor Google account limits and rate limiting
+To scale beyond 10 concurrent requests:
 
-This architecture provides a robust, scalable solution for parallel video generation while handling the complexities of authentication persistence and file management in a headless browser environment.
+1. Create additional Google accounts
+2. Set up new authenticated contexts
+3. Update the context pool configuration
+4. Consider implementing:
+   - Request queueing with estimated wait times
+   - Load balancing across multiple instances
+   - Context rotation strategies
 
-## Stagehand Docs For When Writing Stagehand Code
+## 🤝 Contributing
 
-- [Interact with a website](https://docs.stagehand.dev/concepts/act.md): You can use Stagehand to intelligently interact with a website using AI
-- [Build a web browsing agent](https://docs.stagehand.dev/concepts/agent.md): Build an AI agent that can autonomously control a browser with Stagehand
-- [Best Practices](https://docs.stagehand.dev/examples/best_practices.md): Prompting Stagehand places an emphasis on being atomic and specific. Here are some guidelines to help you use Stagehand effectively.
-- [Caching Actions](https://docs.stagehand.dev/examples/caching.md): You can cache actions in Stagehand to avoid redundant LLM calls.
-- [Computer Use Agents](https://docs.stagehand.dev/examples/computer_use.md): Incorporate Computer Use APIs from Anthropic and OpenAI with one line of code in Stagehand.
-- [Contribute to Stagehand](https://docs.stagehand.dev/examples/contributing.md): Best practices for making a meaningful contribution to Stagehand
-- [LLM Customization](https://docs.stagehand.dev/examples/custom_llms.md): Stagehand supports a wide variety of LLMs. You can use any LLM that supports structured outputs with our existing clients, or by writing a custom LLM provider.
-- [Browser Customization](https://docs.stagehand.dev/examples/customize_browser.md): Stagehand can run on any Chromium-based browser, like Chrome, Edge, Arc, and Brave.
-- [Stagehand in Next.js](https://docs.stagehand.dev/examples/nextjs.md): Next.js is a popular framework for developing web-based applications in production. It powers Stagehand apps like [Director](https://director.ai), [Brainrot](https://brainrot.run) and [Open Operator](https://operator.browserbase.com).
-- [Telemetry and Evaluations](https://docs.stagehand.dev/examples/running_evals.md): How to view LLM usage and run evals on your Stagehand workflows.
-- [Install Stagehand](https://docs.stagehand.dev/get_started/integrate_stagehand.md)
-- [What is Stagehand?](https://docs.stagehand.dev/get_started/introduction.md): Stagehand allows you to automate browsers with natural language and code.
-- [Quickstart](https://docs.stagehand.dev/get_started/quickstart.md)
-- [CrewAI Integration](https://docs.stagehand.dev/integrations/crew-ai.md): Automate browser tasks using natural language instructions with CrewAI
-- [TypeScript Playbook](https://docs.stagehand.dev/integrations/guides.md): Ready-to-run templates via npx create-browser-app
-- [Langchain JS](https://docs.stagehand.dev/integrations/langchain.md): Integrate Stagehand with Langchain JS
-- [Browserbase MCP Server Configuration](https://docs.stagehand.dev/integrations/mcp/configuration.md): Configure your browser automation with command-line flags, environment variables, and advanced options
-- [Browserbase MCP Server](https://docs.stagehand.dev/integrations/mcp/introduction.md): AI-powered browser automation through Model Context Protocol integration with Stagehand
-- [Browserbase MCP Server Setup](https://docs.stagehand.dev/integrations/mcp/setup.md): Add the Browserbase MCP Server to Claude
-- [Browserbase MCP Server Tools](https://docs.stagehand.dev/integrations/mcp/tools.md): This guide covers the specialized tools available in the Browserbase MCP server for browser automation and interaction.
-- [Act](https://docs.stagehand.dev/reference/act.md): Perform actions on the current page
-- [Agent](https://docs.stagehand.dev/reference/agent.md): Web AI agents for any task
-- [Extract](https://docs.stagehand.dev/reference/extract.md): Extract structured data from the page
-- [Configuration](https://docs.stagehand.dev/reference/initialization_config.md): How to configure Stagehand
-- [Observe](https://docs.stagehand.dev/reference/observe.md): Get candidate DOM elements for actions
-- [Playwright Interoperability](https://docs.stagehand.dev/reference/playwright_interop.md): How Stagehand interacts with Playwright
-# Browserbase Documentation
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Docs
+## 📝 License
 
-- [Browser Extensions](https://docs.browserbase.com/features/browser-extensions.md): Augment your browser sessions with your own Chrome extensions.
-- [Contexts](https://docs.browserbase.com/features/contexts.md): Reuse cookies, authentication, and cached data across browser sessions.
-- [Downloads](https://docs.browserbase.com/features/downloads.md): Triggering and retrieving downloaded files
-- [Proxies](https://docs.browserbase.com/features/proxies.md): Route your automation traffic with precision & control
-- [Screenshots and PDFs](https://docs.browserbase.com/features/screenshots.md)
-- [Session Inspector](https://docs.browserbase.com/features/session-inspector.md): Real-time monitoring and debugging tools for your browser sessions
-- [Live View](https://docs.browserbase.com/features/session-live-view.md): An interactive window to display or control a browser session.
-- [Metadata](https://docs.browserbase.com/features/session-metadata.md): Tag and query Sessions with custom data
-- [Session Replay](https://docs.browserbase.com/features/session-replay.md): Replay a Session to inspect the actions performed and network requests
-- [Stealth Mode](https://docs.browserbase.com/features/stealth-mode.md): How to use Stealth Mode for CAPTCHA solving and anti-bot avoidance.
-- [Uploads](https://docs.browserbase.com/features/uploads.md)
-- [Viewports](https://docs.browserbase.com/features/viewports.md): Configure viewport sizes for your sessions
-- [Create a Browser Session](https://docs.browserbase.com/fundamentals/create-browser-session.md): Learn how to create and configure browser sessions in Browserbase
-- [Manage a Browser Session](https://docs.browserbase.com/fundamentals/manage-browser-session.md): Learn how to manage session termination and inspect completed sessions
-- [Using a Browser Session](https://docs.browserbase.com/fundamentals/using-browser-session.md): Learn how to connect to and interact with browser sessions
-- [Handling Authentication](https://docs.browserbase.com/guides/authentication.md): Managing 2FA and other authentication flows.
-- [Concurrency & Rate Limits](https://docs.browserbase.com/guides/concurrency-rate-limits.md): Session limits and rate controls for concurrent browsers
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Whenever you make a change that would basically require an update to the claw.md file, make sure you also update the claw.md file so that it stays up-to-date and in sync with the state of the codebase. 
+## 🙏 Acknowledgments
+
+- [Browserbase](https://www.browserbase.com/) for cloud browser infrastructure
+- [Stagehand](https://stagehand.dev/) for AI-powered browser automation
+- Google Flow team for the video generation service
+
+---
+
+**Note**: This project is designed for authorized use with Google's Flow video generation service. Ensure you have proper permissions and comply with all terms of service. 
