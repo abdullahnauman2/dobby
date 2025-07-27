@@ -1,0 +1,48 @@
+# Session Downloads
+
+## OpenAPI
+
+````yaml get /v1/sessions/{id}/downloads
+paths:
+  path: /v1/sessions/{id}/downloads
+  method: get
+  servers:
+    - url: https://api.browserbase.com
+      description: Public endpoint
+  request:
+    security:
+      - title: BrowserbaseAuth
+        parameters:
+          query: {}
+          header:
+            X-BB-API-Key:
+              type: apiKey
+              description: >-
+                Your [Browserbase API
+                Key](https://www.browserbase.com/settings).
+          cookie: {}
+    parameters:
+      path:
+        id:
+          schema:
+            - type: string
+              required: true
+      query: {}
+      header: {}
+      cookie: {}
+    body: {}
+  response:
+    '200':
+      application/zip:
+        schemaArray:
+          - type: file
+            contentEncoding: binary
+        examples:
+          example: {}
+        description: The request has succeeded.
+  deprecated: false
+  type: path
+components:
+  schemas: {}
+
+````
