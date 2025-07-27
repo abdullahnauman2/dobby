@@ -1,26 +1,17 @@
 # Dobby 🧙‍♂️
 
-> AI-powered parallel video generation system using browser automation
+> Browser automation to expose Google Flow via an API
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://cloud.google.com/)
 
-Dobby is a high-performance video generation API that leverages browser automation to generate videos through Google's Flow video generation service. It manages multiple authenticated browser contexts to enable parallel video generation, handling up to 10 concurrent requests.
+Dobby manages multiple authenticated browser contexts to allow video generation via the Google Flow web app.
 
-## 🚀 Key Features
+## Architecture Overview
 
-- **Parallel Processing**: Handle up to 10 concurrent video generation requests
-- **Persistent Authentication**: Context-based authentication that survives between sessions
-- **AI-Powered Automation**: Uses Stagehand for intelligent browser interaction
-- **Cloud-Native**: Designed for deployment on Google Cloud Run
-- **TypeScript**: Fully typed for enhanced developer experience
-- **Scalable Architecture**: Easily expandable to support more concurrent sessions
-
-## 🏗️ Architecture Overview
-
-Dobby uses a unique architecture that combines:
+Dobby combines:
 
 - **[Browserbase](https://www.browserbase.com/)**: Cloud browser infrastructure for running headless browsers
 - **[Stagehand](https://stagehand.dev/)**: AI-powered browser automation tool
@@ -36,28 +27,23 @@ Dobby uses a unique architecture that combines:
 5. **Download & Delivery**: Retrieves the generated video and streams it to the client
 6. **Cleanup**: Releases the context for the next request
 
-## 📋 Prerequisites
-
-- Node.js v18 or higher
-- npm or yarn
-- Browserbase API key
-- Google API key (for Gemini 2.5 Pro) or OpenAI API key
-- 10 Google accounts for parallel processing
-
-## 🛠️ Installation
+## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/yourusername/dobby.git
 cd dobby
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Create a `.env` file:
+
 ```env
 PORT=8080
 BROWSERBASE_API_KEY=your_browserbase_api_key
@@ -66,22 +52,25 @@ GOOGLE_API_KEY=your_google_api_key  # Recommended
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-## 🚦 Quick Start
+## Quick Start
 
 ### Development Mode
+
 ```bash
 npm run dev
 ```
 
 ### Production Build
+
 ```bash
 npm run build
 npm start
 ```
 
-## 📡 API Reference
+## API Reference
 
 ### Health Check
+
 ```http
 GET /
 ```
@@ -89,6 +78,7 @@ GET /
 Returns service status and health information.
 
 **Response:**
+
 ```json
 {
   "status": "running",
@@ -99,6 +89,7 @@ Returns service status and health information.
 ```
 
 ### Generate Video
+
 ```http
 POST /generate/text-to-video
 ```
@@ -106,6 +97,7 @@ POST /generate/text-to-video
 Generates a video based on the provided text prompt.
 
 **Request Body:**
+
 ```json
 {
   "prompt": "A magical castle floating in the clouds"
@@ -113,10 +105,12 @@ Generates a video based on the provided text prompt.
 ```
 
 **Response:**
+
 - **Content-Type**: `video/mp4`
 - **Body**: Binary video stream
 
 **Status Codes:**
+
 - `200`: Video generated successfully
 - `503`: All workers busy
 - `500`: Generation failed
@@ -137,12 +131,12 @@ Before using Dobby, you need to set up 10 authenticated browser contexts:
 
 ### Environment Variables
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `PORT` | Server port | No | `8080` |
-| `BROWSERBASE_API_KEY` | Browserbase API key | Yes | - |
-| `GOOGLE_API_KEY` | Google API key for Gemini | Recommended | - |
-| `OPENAI_API_KEY` | OpenAI API key (fallback) | No | - |
+| Variable              | Description               | Required    | Default |
+| --------------------- | ------------------------- | ----------- | ------- |
+| `PORT`                | Server port               | No          | `8080`  |
+| `BROWSERBASE_API_KEY` | Browserbase API key       | Yes         | -       |
+| `GOOGLE_API_KEY`      | Google API key for Gemini | Recommended | -       |
+| `OPENAI_API_KEY`      | OpenAI API key (fallback) | No          | -       |
 
 ## 📦 Project Structure
 
@@ -167,16 +161,18 @@ dobby/
 └── README.md              # This file
 ```
 
-## 🚀 Deployment
+## Deployment
 
 ### Google Cloud Run
 
 1. Build the container:
+
 ```bash
 gcloud builds submit --tag gcr.io/YOUR_PROJECT/dobby
 ```
 
 2. Deploy to Cloud Run:
+
 ```bash
 gcloud run deploy dobby \
   --image gcr.io/YOUR_PROJECT/dobby \
@@ -185,50 +181,3 @@ gcloud run deploy dobby \
   --allow-unauthenticated \
   --set-env-vars BROWSERBASE_API_KEY=xxx,GOOGLE_API_KEY=xxx
 ```
-
-## 🔍 Monitoring & Maintenance
-
-### Health Monitoring
-- Track context availability and health status
-- Monitor authentication expiry
-- Alert on repeated failures
-
-### Performance Metrics
-- Average video generation time: ~60-90 seconds
-- Context utilization rates
-- Request queue depths
-- Success/failure rates per context
-
-## 🎯 Scaling
-
-To scale beyond 10 concurrent requests:
-
-1. Create additional Google accounts
-2. Set up new authenticated contexts
-3. Update the context pool configuration
-4. Consider implementing:
-   - Request queueing with estimated wait times
-   - Load balancing across multiple instances
-   - Context rotation strategies
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [Browserbase](https://www.browserbase.com/) for cloud browser infrastructure
-- [Stagehand](https://stagehand.dev/) for AI-powered browser automation
-- Google Flow team for the video generation service
-
----
-
-**Note**: This project is designed for authorized use with Google's Flow video generation service. Ensure you have proper permissions and comply with all terms of service. 
