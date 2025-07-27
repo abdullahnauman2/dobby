@@ -100,7 +100,7 @@ Returns service status and health information.
 
 ### Generate Video
 ```http
-POST /generate-video
+POST /generate/text-to-video
 ```
 
 Generates a video based on the provided text prompt.

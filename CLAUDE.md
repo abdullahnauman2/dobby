@@ -92,7 +92,7 @@ Here is the automation we are building:
 ### Step 1: Client Request
 
 <step_1_details>
-A client sends a POST request to `/generate-video` containing:
+A client sends a POST request to `/generate/text-to-video` containing:
 
 - A text prompt (e.g., "bananas in pajamas")
 - TODO: Reference image support will be added in a future update
@@ -376,7 +376,7 @@ When implementing Browserbase features, ALWAYS consult these documents first:
 - **[Handling Authentication](./docs/browserbase/guides/authentication.md)**: Managing 2FA and other authentication flows
 - **[Concurrency & Rate Limits](./docs/browserbase/guides/concurrency-rate-limits.md)**: Session limits and rate controls
   </browserbase_docs>
-
++
 <implementation_checklist>
 
 ## Implementation Checklist

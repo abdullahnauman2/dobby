@@ -2,7 +2,6 @@ import express, { Request, Response } from "express";
 import dotenv from "dotenv";
 // import multer from 'multer'; // Will be used for reference image uploads
 import { Stagehand } from "@browserbasehq/stagehand";
-import { z } from "zod";
 import {
   getAllWorkers,
   getWorkerById,
@@ -20,6 +19,7 @@ import {
   createContext,
   createBrowserbaseClient,
 } from "./lib/browserUtils";
+import * as actions from "./lib/actions";
 
 dotenv.config();
 
@@ -28,15 +28,14 @@ const PORT = process.env.PORT || 8080;
 
 app.use(express.json());
 
-// TODO: Configure multer for in-memory file uploads when implementing reference images
-// const upload = multer({
-//   storage: multer.memoryStorage(),
-//   limits: {
-//     fileSize: 50 * 1024 * 1024 // 50MB max file size
-//   }
-// });
-
-// Worker management endpoints
+app.get("/", (_req: Request, res: Response) => {
+  res.json({
+    status: "running",
+    service: "dobby",
+    message: "Dobby is running.",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // GET /workers - List all workers and their status
 app.get("/workers", (_req: Request, res: Response) => {
@@ -286,16 +285,7 @@ app.post("/workers/:workerId/verify", async (req: Request, res: Response) => {
   }
 });
 
-app.get("/", (_req: Request, res: Response) => {
-  res.json({
-    status: "running",
-    service: "dobby",
-    message: "Dobby is free! Service is running successfully.",
-    timestamp: new Date().toISOString(),
-  });
-});
-
-app.post("/generate-video", async (req: Request, res: Response) => {
+app.post("/generate/text-to-video", async (req: Request, res: Response) => {
   const { prompt } = req.body;
   let stagehand: Stagehand | null = null;
   let workerId: string | null = null;
@@ -310,7 +300,7 @@ app.post("/generate-video", async (req: Request, res: Response) => {
 
   try {
     // Get an available worker
-    const worker = await getAvailableWorker();
+    const worker = getAvailableWorker();
     if (!worker) {
       res.status(503).json({
         success: false,
@@ -340,237 +330,137 @@ app.post("/generate-video", async (req: Request, res: Response) => {
     console.log(`[${workerId}] Download behavior configured for BrowserBase`);
 
     // Navigate to Flow (already authenticated via context)
-    console.log(`[${workerId}] Navigating to Google Labs Flow`);
-    await stagehand.page.goto("https://labs.google/fx/tools/flow");
-    await stagehand.page.waitForLoadState("networkidle");
-    console.log(`[${workerId}] Successfully loaded Flow interface`);
-
-    // Check if we're still authenticated
-    const currentUrl = stagehand.page.url();
-    if (
-      currentUrl.includes("accounts.google.com") ||
-      currentUrl.includes("oauth.google.com")
-    ) {
+    const navigateResult = await actions.navigateToGoogleFlow(stagehand, workerId);
+    if (!navigateResult.success) {
       markWorkerUnhealthy(workerId);
-      throw new Error(
-        `Worker ${workerId} is not authenticated. Please re-authenticate.`
-      );
+      throw new Error(navigateResult.error);
     }
 
     // Click the "New Project" button
-    // From ./docs/stagehand/examples/best_practices.md - be atomic and specific
-    console.log(`[${workerId}] Clicking create new project button`);
-    await stagehand.page.act({
-      action:
-        "Click the 'New Project' button with a plus icon towards the bottom of the page",
-      domSettleTimeoutMs: 5000,
-    });
-    console.log(`[${workerId}] New project created`);
-
-    // Wait for the page to be ready
-    await stagehand.page.waitForLoadState("networkidle");
+    const newProjectResult = await actions.clickNewProjectButton(stagehand, workerId);
+    if (!newProjectResult.success) {
+      throw new Error(newProjectResult.error);
+    }
 
     // Configure settings before entering prompt
 
     // Type the prompt in the text box
-    console.log(`[${workerId}] Entering prompt: "${prompt}"`);
-    await stagehand.page.act({
-      action:
-        "Type %prompt% in the text box towards the bottom of the page that has the hint text 'Generate a video with text'",
-      variables: {
-        prompt: prompt,
-      },
-      domSettleTimeoutMs: 5000,
-    });
-    console.log(`[${workerId}] Prompt entered`);
-
-    console.log(`[${workerId}] Clicking Tune icon to open generation settings`);
-    await stagehand.page.act({
-      action: "Click the Tune icon in the top right corner of the text box",
-      domSettleTimeoutMs: 5000,
-    });
-    console.log(`[${workerId}] Settings menu opened`);
-
-    // Set outputs per prompt to 1
-    console.log(`[${workerId}] Configuring outputs per prompt`);
-    await stagehand.page.act({
-      action: "Click the 'Outputs per prompt' dropdown",
-      domSettleTimeoutMs: 3000,
-    });
-
-    await stagehand.page.act({
-      action: "Select '1' from the dropdown options",
-      domSettleTimeoutMs: 3000,
-    });
-    console.log(`[${workerId}] Set outputs per prompt to 1`);
-
-    // Set model to Veo 3 - Fast
-    console.log(`[${workerId}] Selecting video generation model`);
-    await stagehand.page.act({
-      action: "Click the 'Model' dropdown",
-      domSettleTimeoutMs: 3000,
-    });
-
-    await stagehand.page.act({
-      action: "Select 'Veo 3 - Fast' from the dropdown options",
-      domSettleTimeoutMs: 3000,
-    });
-    console.log(`[${workerId}] Model set to Veo 3 - Fast`);
-
-    // Click the submit button
-    console.log(`[${workerId}] Clicking generate video button`);
-    await stagehand.page.act({
-      action:
-        "Click the circle button with an arrow → on the bottom right corner of the text box to submit the prompt",
-      domSettleTimeoutMs: 5000,
-    });
-    console.log(`[${workerId}] Submit prompt button clicked`);
-
-    // Confirm the prompt was submitted
-    await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds for UI to update
-    console.log(`[${workerId}] Prompt successfully submitted`);
-
-    // Wait for video to generate
-    const videoMaxWaitTime = 600000; // 10 minutes
-    const videoStartTime = Date.now();
-    console.log(`[${workerId}] Waiting for video generation (max 10 minutes)`);
-    let lastLoggedPercentage = 0;
-
-    while (Date.now() - videoStartTime < videoMaxWaitTime) {
-      try {
-        // First, check if video generation is complete
-        const completionResult = await stagehand.page.extract({
-          instruction:
-            "Is the video fully generated and ready? Look for a completed video frame without any loading indicators. Return true if the video is complete, false if it's still loading.",
-          schema: z.object({
-            isComplete: z.boolean(),
-          }),
-          useTextExtract: true,
-          domSettleTimeoutMs: 3000,
-        });
-
-        // If video is complete, break out of the loop
-        if (completionResult.isComplete) {
-          console.log(`[${workerId}] Video generation complete`);
-          break;
-        }
-
-        // Video is not complete, so check for progress percentage
-        try {
-          const progressResult = await stagehand.page.extract({
-            instruction:
-              "Find the loading percentage indicator (like '50%' or '80%'). Return just the number without the percent sign. If no percentage is visible, return 0.",
-            schema: z.object({
-              percentage: z.number(),
-            }),
-            useTextExtract: true,
-            domSettleTimeoutMs: 2000,
-          });
-
-          // Log progress if percentage changed and is valid
-          if (progressResult.percentage > 0 && progressResult.percentage > lastLoggedPercentage) {
-            console.log(
-              `[${workerId}] Video generation progress: ${progressResult.percentage}%`
-            );
-            lastLoggedPercentage = progressResult.percentage;
-          }
-        } catch (progressError) {
-          // If we can't extract progress, that's okay - we already know it's not complete
-          console.log(
-            `[${workerId}] Could not extract progress percentage, continuing to wait`
-          );
-        }
-      } catch (completionError) {
-        // If we can't determine completion status, log and continue
-        console.log(
-          `[${workerId}] Could not determine completion status, continuing to wait`
-        );
-      }
-
-      // Wait 2 seconds before checking again
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    const typePromptResult = await actions.typePromptIntoTextBox(stagehand, workerId, prompt);
+    if (!typePromptResult.success) {
+      throw new Error(typePromptResult.error);
     }
 
-    if (Date.now() - videoStartTime >= videoMaxWaitTime) {
-      throw new Error("Video generation timed out after 10 minutes");
+    // Open settings menu
+    const tuneResult = await actions.clickTuneIconForPromptSettings(stagehand, workerId);
+    if (!tuneResult.success) {
+      throw new Error(tuneResult.error);
+    }
+
+    // Set outputs per prompt to 1
+    const outputsDropdownResult = await actions.clickOutputsPerPromptDropdown(stagehand, workerId);
+    if (!outputsDropdownResult.success) {
+      throw new Error(outputsDropdownResult.error);
+    }
+    
+    const selectOneResult = await actions.selectOneFromDropdownOptions(stagehand, workerId);
+    if (!selectOneResult.success) {
+      throw new Error(selectOneResult.error);
+    }
+
+    // Set model to Veo 3 - Fast
+    const modelDropdownResult = await actions.clickModelDropdown(stagehand, workerId);
+    if (!modelDropdownResult.success) {
+      throw new Error(modelDropdownResult.error);
+    }
+    
+    const selectVeoResult = await actions.selectVeo3FastFromDropdownOptions(stagehand, workerId);
+    if (!selectVeoResult.success) {
+      throw new Error(selectVeoResult.error);
+    }
+    
+    // Click into the textbox to ensure it's focused
+    const focusResult = await actions.clickTextboxToFocus(stagehand, workerId);
+    if (!focusResult.success) {
+      throw new Error(focusResult.error);
+    }
+
+    // Click the submit button
+    const submitResult = await actions.clickSubmitPromptButton(stagehand, workerId);
+    if (!submitResult.success) {
+      throw new Error(submitResult.error);
+    }
+
+    // Wait for video to generate
+    const watchResult = await actions.watchVideoForProgressOrCompletion(stagehand, workerId);
+    if (!watchResult.success) {
+      throw new Error(watchResult.error);
     }
 
     // Take a screenshot to track progress
-    console.log(`[${workerId}] Capturing completion screenshot`);
-    const progressScreenshotPath = `screenshots/generation-complete-${workerId}-${Date.now()}.png`;
-    const progressScreenshotBuffer = await stagehand.page.screenshot({
-      fullPage: false,
-    });
-
-    // Save screenshot
-    const fs = await import("fs");
-    fs.writeFileSync(progressScreenshotPath, progressScreenshotBuffer);
-    console.log(`[${workerId}] Screenshot saved: ${progressScreenshotPath}`);
+    const screenshotResult = await actions.takeCheckpointScreenshot(stagehand, workerId);
+    if (!screenshotResult.success) {
+      console.error(`[${workerId}] Failed to take screenshot: ${screenshotResult.error}`);
+    }
 
     // Download the video
-    // From ./docs/stagehand/examples/best_practices.md - be atomic and specific
     console.log(`[${workerId}] Preparing to download video`);
-    
+
     // Step 1: Hover over the video to reveal controls
-    await stagehand.page.act({
-      action: "Hover over the video frame to reveal the control buttons",
-      domSettleTimeoutMs: 3000,
-    });
-    console.log(`[${workerId}] Video controls revealed`);
-    
-    // Wait for controls to appear
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const hoverResult = await actions.hoverOverVideoFrame(stagehand, workerId);
+    if (!hoverResult.success) {
+      throw new Error(hoverResult.error);
+    }
 
     // Step 2: Click the download icon (leftmost icon in the pill-shaped button)
-    console.log(`[${workerId}] Looking for download icon`);
-    await stagehand.page.act({
-      action:
-        "Click the leftmost icon (download icon) in the pill-shaped button that appeared in the top right corner of the video frame",
-      domSettleTimeoutMs: 3000,
-    });
-    console.log(`[${workerId}] Download menu opened`);
-    
-    // Wait for menu to appear
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const downloadIconResult = await actions.clickDownloadIconInFloatingActionPill(stagehand, workerId);
+    if (!downloadIconResult.success) {
+      throw new Error(downloadIconResult.error);
+    }
 
     // Step 3: Set up download listener before clicking
     console.log(`[${workerId}] Setting up download listener`);
     let downloadFilename: string | undefined;
-    
+
     // Listen for download event using Playwright's page
-    const downloadPromise = stagehand.page.waitForEvent('download', { timeout: 30000 }).catch(() => null);
-    
+    const downloadPromise = stagehand.page
+      .waitForEvent("download", { timeout: 30000 })
+      .catch(() => null);
+
     // Click to start download
-    console.log(`[${workerId}] Selecting download quality`);
-    await stagehand.page.act({
-      action: "Click 'Original' option from the download menu (it's the second option, not 'Animated GIF' or 'Upscaled')",
-      domSettleTimeoutMs: 3000,
-    });
-    console.log(`[${workerId}] Download action triggered`);
-    
+    const originalOptionResult = await actions.clickOriginalOptionFromDownloadMenu(stagehand, workerId);
+    if (!originalOptionResult.success) {
+      throw new Error(originalOptionResult.error);
+    }
+
     // Wait for download event
     console.log(`[${workerId}] Waiting for download to start...`);
     const download = await downloadPromise;
-    
+
     if (download) {
       downloadFilename = download.suggestedFilename();
-      console.log(`[${workerId}] Download started! Filename: ${downloadFilename}`);
-      
+      console.log(
+        `[${workerId}] Download started! Filename: ${downloadFilename}`
+      );
+
       // Wait for download to complete
       const downloadPath = await download.path().catch(() => null);
       if (downloadPath) {
-        console.log(`[${workerId}] Download saved to temporary path: ${downloadPath}`);
+        console.log(
+          `[${workerId}] Download saved to temporary path: ${downloadPath}`
+        );
       }
-      
+
       // Also log download failure if any
       const failure = await download.failure();
       if (failure) {
         console.log(`[${workerId}] Download failed: ${failure}`);
       }
     } else {
-      console.log(`[${workerId}] WARNING: No download event detected within 30 seconds`);
+      console.log(
+        `[${workerId}] WARNING: No download event detected within 30 seconds`
+      );
     }
-    
+
     // Give extra time for BrowserBase to process the download
     console.log(`[${workerId}] Waiting for BrowserBase to process download...`);
     await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -593,16 +483,21 @@ app.post("/generate-video", async (req: Request, res: Response) => {
     const downloadStartTime = Date.now();
     const downloadMaxWaitTime = 60000; // 60 seconds timeout
     const pollInterval = 2000; // Check every 2 seconds as per docs
-    
-    console.log(`[${workerId}] Polling for synced downloads (may take time for large files)...`);
-    
-    while (!validZipFound && (Date.now() - downloadStartTime) < downloadMaxWaitTime) {
+
+    console.log(
+      `[${workerId}] Polling for synced downloads (may take time for large files)...`
+    );
+
+    while (
+      !validZipFound &&
+      Date.now() - downloadStartTime < downloadMaxWaitTime
+    ) {
       try {
         // The list method returns a zip file containing all downloads
         const response = await bb.sessions.downloads.list(sessionId);
         // Convert response to buffer
         zipBuffer = Buffer.from(await response.arrayBuffer());
-        
+
         // Check if we have a real file (not just empty zip headers)
         // A video file zip should be much larger than 100 bytes
         if (zipBuffer.length > 1000) {
@@ -619,24 +514,26 @@ app.post("/generate-video", async (req: Request, res: Response) => {
       } catch (error) {
         console.log(`[${workerId}] Downloads not ready yet, waiting...`);
       }
-      
+
       // Wait before next attempt
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
     }
 
     if (!validZipFound || !zipBuffer || zipBuffer.length < 1000) {
-      const errorMsg = zipBuffer 
+      const errorMsg = zipBuffer
         ? `Download sync incomplete after 60 seconds (final size: ${zipBuffer.length} bytes)`
         : "No downloads found after waiting 60 seconds";
       throw new Error(errorMsg);
     }
 
     console.log(`[${workerId}] Download sync completed`);
-    
+
     // Debug: Verify this is a valid zip file
     const isZip = zipBuffer[0] === 0x50 && zipBuffer[1] === 0x4b; // PK header
     if (!isZip) {
-      console.log(`[${workerId}] WARNING: File does not have valid ZIP headers`);
+      console.log(
+        `[${workerId}] WARNING: File does not have valid ZIP headers`
+      );
     }
 
     // TODO: Extract the MP4 file from zip
@@ -649,7 +546,7 @@ app.post("/generate-video", async (req: Request, res: Response) => {
       success: true,
       message: "Video generated successfully",
       sessionId: sessionId,
-      progressScreenshotPath: progressScreenshotPath,
+      progressScreenshotPath: screenshotResult.success ? screenshotResult.screenshotPath : undefined,
       note: "Video is available in the downloaded files. Implementation for extracting MP4 file from zip is pending.",
       timestamp: new Date().toISOString(),
     });
