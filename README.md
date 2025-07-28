@@ -1,13 +1,6 @@
-# Dobby 🧙‍♂️
+# Dobby
 
-> Browser automation to expose Google Flow via an API
-
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://cloud.google.com/)
-
-Dobby manages multiple authenticated browser contexts to allow video generation via the Google Flow web app.
+Orchestration layer for authenticated browser sessions atop Google Flow. Uses Stagehand and Browserbase to expose an API. Named after the house-elf.
 
 <!--
 ## Architecture Overview
