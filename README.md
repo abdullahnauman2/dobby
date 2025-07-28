@@ -9,6 +9,7 @@
 
 Dobby manages multiple authenticated browser contexts to allow video generation via the Google Flow web app.
 
+<!--
 ## Architecture Overview
 
 Dobby combines:
@@ -180,4 +181,4 @@ gcloud run deploy dobby \
   --region us-central1 \
   --allow-unauthenticated \
   --set-env-vars BROWSERBASE_API_KEY=xxx,GOOGLE_API_KEY=xxx
-```
+``` -->

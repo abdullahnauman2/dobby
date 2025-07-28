@@ -330,14 +330,20 @@ app.post("/generate/text-to-video", async (req: Request, res: Response) => {
     console.log(`[${workerId}] Download behavior configured for BrowserBase`);
 
     // Navigate to Flow (already authenticated via context)
-    const navigateResult = await actions.navigateToGoogleFlow(stagehand, workerId);
+    const navigateResult = await actions.navigateToGoogleFlow(
+      stagehand,
+      workerId
+    );
     if (!navigateResult.success) {
       markWorkerUnhealthy(workerId);
       throw new Error(navigateResult.error);
     }
 
     // Click the "New Project" button
-    const newProjectResult = await actions.clickNewProjectButton(stagehand, workerId);
+    const newProjectResult = await actions.clickNewProjectButton(
+      stagehand,
+      workerId
+    );
     if (!newProjectResult.success) {
       throw new Error(newProjectResult.error);
     }
@@ -345,39 +351,58 @@ app.post("/generate/text-to-video", async (req: Request, res: Response) => {
     // Configure settings before entering prompt
 
     // Type the prompt in the text box
-    const typePromptResult = await actions.typePromptIntoTextBox(stagehand, workerId, prompt);
+    const typePromptResult = await actions.typePromptIntoTextBox(
+      stagehand,
+      workerId,
+      prompt
+    );
     if (!typePromptResult.success) {
       throw new Error(typePromptResult.error);
     }
 
     // Open settings menu
-    const tuneResult = await actions.clickTuneIconForPromptSettings(stagehand, workerId);
+    const tuneResult = await actions.clickTuneIconForPromptSettings(
+      stagehand,
+      workerId
+    );
     if (!tuneResult.success) {
       throw new Error(tuneResult.error);
     }
 
     // Set outputs per prompt to 1
-    const outputsDropdownResult = await actions.clickOutputsPerPromptDropdown(stagehand, workerId);
+    const outputsDropdownResult = await actions.clickOutputsPerPromptDropdown(
+      stagehand,
+      workerId
+    );
     if (!outputsDropdownResult.success) {
       throw new Error(outputsDropdownResult.error);
     }
-    
-    const selectOneResult = await actions.selectOneFromDropdownOptions(stagehand, workerId);
+
+    const selectOneResult = await actions.selectOneFromDropdownOptions(
+      stagehand,
+      workerId
+    );
     if (!selectOneResult.success) {
       throw new Error(selectOneResult.error);
     }
 
     // Set model to Veo 3 - Fast
-    const modelDropdownResult = await actions.clickModelDropdown(stagehand, workerId);
+    const modelDropdownResult = await actions.clickModelDropdown(
+      stagehand,
+      workerId
+    );
     if (!modelDropdownResult.success) {
       throw new Error(modelDropdownResult.error);
     }
-    
-    const selectVeoResult = await actions.selectVeo3FastFromDropdownOptions(stagehand, workerId);
+
+    const selectVeoResult = await actions.selectVeo3FastFromDropdownOptions(
+      stagehand,
+      workerId
+    );
     if (!selectVeoResult.success) {
       throw new Error(selectVeoResult.error);
     }
-    
+
     // Click into the textbox to ensure it's focused
     const focusResult = await actions.clickTextboxToFocus(stagehand, workerId);
     if (!focusResult.success) {
@@ -385,21 +410,32 @@ app.post("/generate/text-to-video", async (req: Request, res: Response) => {
     }
 
     // Click the submit button
-    const submitResult = await actions.clickSubmitPromptButton(stagehand, workerId);
+    const submitResult = await actions.clickSubmitPromptButton(
+      stagehand,
+      workerId
+    );
     if (!submitResult.success) {
       throw new Error(submitResult.error);
     }
 
     // Wait for video to generate
-    const watchResult = await actions.watchVideoForProgressOrCompletion(stagehand, workerId);
+    const watchResult = await actions.watchVideoForProgressOrCompletion(
+      stagehand,
+      workerId
+    );
     if (!watchResult.success) {
       throw new Error(watchResult.error);
     }
 
     // Take a screenshot to track progress
-    const screenshotResult = await actions.takeCheckpointScreenshot(stagehand, workerId);
+    const screenshotResult = await actions.takeCheckpointScreenshot(
+      stagehand,
+      workerId
+    );
     if (!screenshotResult.success) {
-      console.error(`[${workerId}] Failed to take screenshot: ${screenshotResult.error}`);
+      console.error(
+        `[${workerId}] Failed to take screenshot: ${screenshotResult.error}`
+      );
     }
 
     // Download the video
@@ -412,7 +448,8 @@ app.post("/generate/text-to-video", async (req: Request, res: Response) => {
     }
 
     // Step 2: Click the download icon (leftmost icon in the pill-shaped button)
-    const downloadIconResult = await actions.clickDownloadIconInFloatingActionPill(stagehand, workerId);
+    const downloadIconResult =
+      await actions.clickDownloadIconInFloatingActionPill(stagehand, workerId);
     if (!downloadIconResult.success) {
       throw new Error(downloadIconResult.error);
     }
@@ -422,12 +459,14 @@ app.post("/generate/text-to-video", async (req: Request, res: Response) => {
     let downloadFilename: string | undefined;
 
     // Listen for download event using Playwright's page
+    // abdullah here, I find that I'm getting doing the download on the browserbase side
     const downloadPromise = stagehand.page
       .waitForEvent("download", { timeout: 30000 })
       .catch(() => null);
 
     // Click to start download
-    const originalOptionResult = await actions.clickOriginalOptionFromDownloadMenu(stagehand, workerId);
+    const originalOptionResult =
+      await actions.clickOriginalOptionFromDownloadMenu(stagehand, workerId);
     if (!originalOptionResult.success) {
       throw new Error(originalOptionResult.error);
     }
@@ -468,8 +507,9 @@ app.post("/generate/text-to-video", async (req: Request, res: Response) => {
     // Check for completed downloads
     console.log(`[${workerId}] Checking for completed downloads`);
 
-    // Get the downloaded files from BrowserBase
+    // Create a Browserbase client
     const bb = createBrowserbaseClient();
+    // Get the session ID from the stagehand instance
     const sessionId = stagehand.browserbaseSessionID;
 
     if (!sessionId) {
@@ -499,7 +539,7 @@ app.post("/generate/text-to-video", async (req: Request, res: Response) => {
         zipBuffer = Buffer.from(await response.arrayBuffer());
 
         // Check if we have a real file (not just empty zip headers)
-        // A video file zip should be much larger than 100 bytes
+        // abdullah: Currently, I'm getting a 22 byte empty zip file
         if (zipBuffer.length > 1000) {
           console.log(
             `[${workerId}] Retrieved downloads zip, size: ${zipBuffer.length} bytes`
@@ -529,6 +569,7 @@ app.post("/generate/text-to-video", async (req: Request, res: Response) => {
     console.log(`[${workerId}] Download sync completed`);
 
     // Debug: Verify this is a valid zip file
+    // abdullah: I'm getting a valid zip file but its empty
     const isZip = zipBuffer[0] === 0x50 && zipBuffer[1] === 0x4b; // PK header
     if (!isZip) {
       console.log(
@@ -536,17 +577,14 @@ app.post("/generate/text-to-video", async (req: Request, res: Response) => {
       );
     }
 
-    // TODO: Extract the MP4 file from zip
-    // For now, we'll store the zip buffer for later processing
-
-    // Return result to client
-
     console.log(`[${workerId}] Video generation completed successfully`);
     res.json({
       success: true,
       message: "Video generated successfully",
       sessionId: sessionId,
-      progressScreenshotPath: screenshotResult.success ? screenshotResult.screenshotPath : undefined,
+      progressScreenshotPath: screenshotResult.success
+        ? screenshotResult.screenshotPath
+        : undefined,
       note: "Video is available in the downloaded files. Implementation for extracting MP4 file from zip is pending.",
       timestamp: new Date().toISOString(),
     });

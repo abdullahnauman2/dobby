@@ -363,8 +363,8 @@ export async function watchVideoForProgressOrCompletion(
 
         // Log progress if percentage changed and is valid
         if (
-          progressResult.percentage > 0 &&
-          progressResult.percentage > lastLoggedPercentage
+          progressResult.percentage > 0
+          // progressResult.percentage > lastLoggedPercentage
         ) {
           console.log(
             `[${workerId}] Video generation progress: ${progressResult.percentage}%`
@@ -442,7 +442,8 @@ export async function hoverOverVideoFrame(
 ): Promise<ActionResult> {
   try {
     await stagehand.page.act({
-      action: "Hover over the video player area to reveal the floating control buttons",
+      action:
+        "Hover over the video player area to reveal the floating control buttons",
       domSettleTimeoutMs: 3000,
     });
     console.log(`[${workerId}] Video controls revealed`);
@@ -471,8 +472,7 @@ export async function clickDownloadIconInFloatingActionPill(
   try {
     console.log(`[${workerId}] Looking for download icon`);
     await stagehand.page.act({
-      action:
-        "Click the Download button with download icon",
+      action: "Click the Download button with download icon",
       domSettleTimeoutMs: 3000,
     });
     console.log(`[${workerId}] Download menu opened`);
